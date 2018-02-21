@@ -14,13 +14,7 @@ const (
 	EventClosed
 )
 
-// Handler is the event callback.
-type Handler interface {
+// EventHandler is the event callback handler.
+type EventHandler interface {
 	OnEvent(e Event, c *Connection, m Message)
-}
-
-// Processor is user defined message processor
-type Processor struct {
-	EventHandler   Handler
-	MessageHandler Message
 }

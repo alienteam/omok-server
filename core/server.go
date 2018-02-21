@@ -9,26 +9,26 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Server :
+// Server represents a websocket server.
 type Server struct {
 	server   *http.Server
 	path     string
-	port     string
+	addr     string
 	upgrader websocket.Upgrader
 	cm       *ConnectionManager
-	proc     *Processor
+	handler  Handler
 }
 
-// NewServer create a websocket server but not start to accept.
-func NewServer(port, path string) *Server {
+// NewServer creates a websocket server but not start to accept.
+func NewServer(addr, path string, h Handler) *Server {
 	s := &Server{
 		server: &http.Server{
-			Addr:         port,
+			Addr:         addr,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
 		},
 		path: path,
-		port: port,
+		addr: addr,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -37,12 +37,13 @@ func NewServer(port, path string) *Server {
 		cm: &ConnectionManager{
 			conns: make(map[*Connection]bool),
 		},
+		handler: h,
 	}
 	s.server.Handler = s
 	return s
 }
 
-// Start runs server
+// Start runs the server
 func (s *Server) Start() {
 	s.server.ListenAndServe()
 }
@@ -57,6 +58,11 @@ func (s *Server) Shutdown() {
 	s.server.Shutdown(context.Background())
 }
 
+// Count returns the concurrency connections
+func (s *Server) Count() int {
+	return s.cm.count()
+}
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -66,8 +72,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleConnect(wc *websocket.Conn) {
-	c := NewConnection(wc, s.proc)
+
+	c := NewConnection(wc, s.handler)
 	s.cm.add(c)
-	c.proc.EventHandler.OnEvent(EventConnected, c, nil)
+
+	defer func() {
+		s.cm.remove(c)
+	}()
+
+	go c.handler.OnEvent(EventConnected, c, nil)
 	c.serve()
 }

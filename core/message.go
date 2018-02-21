@@ -2,25 +2,41 @@ package core
 
 import "encoding/json"
 
-// Message is unit of data.
-type Message interface {
-	Encode(v interface{}) interface{}
-	Decode(v interface{}) interface{}
+// Message is a unit of data
+type Message interface{}
+
+// MessageHandler is message interface
+type MessageHandler interface {
+	Encode(m Message) []byte
+	Decode(v []byte) Message
 }
 
-// JsonMessage is json type of message
-type JsonMessage struct {
+// JsonMessageHandler is json type of MessageHandler
+type JsonMessageHandler struct {
 }
 
 // Encode encodes json type.
-func (m *JsonMessage) Encode(data map[string]interface{}) interface{} {
-	msg, _ := json.Marshal(m)
+func (h *JsonMessageHandler) Encode(v Message) []byte {
+	msg, _ := json.Marshal(v)
 	return msg
 }
 
 // Decode decodes json type.
-func (m *JsonMessage) Decode(data []byte) map[string]interface{} {
+func (h *JsonMessageHandler) Decode(v []byte) Message {
 	var t interface{}
-	json.Unmarshal(data, &t)
-	return t.(map[string]interface{})
+	json.Unmarshal(v, &t)
+	return t
+}
+
+type StringMessageHandler struct {
+}
+
+// Encode encodes string type.
+func (h *StringMessageHandler) Encode(v Message) []byte {
+	return []byte(v.(string))
+}
+
+// Decode decodes string type.
+func (h *StringMessageHandler) Decode(v []byte) Message {
+	return string(v)
 }

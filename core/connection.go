@@ -1,64 +1,71 @@
 package core
 
 import (
-	"github.com/gorilla/websocket"
 	"log"
+
+	"github.com/gorilla/websocket"
 )
 
-// Connection ...
+// The Connection type represents a websocket connection.
 type Connection struct {
-	conn   *websocket.Conn
-	proc   *Processor
-	sendCh chan Message
+	conn    *websocket.Conn
+	handler Handler
+	sendCh  chan Message
+	closeCh chan struct{}
 }
 
 func (c *Connection) serve() {
 	go c.receive()
 	c.send()
-	c.proc.EventHandler.OnEvent(EventClosed, c, nil)
+	c.handler.OnEvent(EventClosed, c, nil)
 }
 
 func (c *Connection) receive() {
 	defer func() {
 		c.conn.Close()
+		close(c.closeCh)
 	}()
 
 	for {
 		_, msg, err := c.conn.ReadMessage()
-		m := c.proc.MessageHandler.Decode(msg)
+		m := c.handler.Decode(msg)
 
 		if err != nil {
 			log.Println(err)
+			c.conn.Close()
 			break
 		}
-		log.Print(msg)
-		c.proc.EventHandler.OnEvent(EventRecv, c, m.(map[string]interface{}))
+		c.handler.OnEvent(EventRecv, c, m)
 	}
 }
 
 func (c *Connection) send() {
-	defer func() {
-		c.conn.Close()
-	}()
-
 	for {
 		select {
-		case _, ok := <-c.sendCh:
+		case msg, ok := <-c.sendCh:
 			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-
-			//c.conn.WriteMessage(websocket.TextMessage, message)
+			data := c.handler.Encode(msg)
+			c.conn.WriteMessage(websocket.TextMessage, data)
+			c.handler.OnEvent(EventSend, c, msg)
+		case <-c.closeCh:
+			return
 		}
 	}
 }
 
-// NewConnection create a websocket connection.
-func NewConnection(c *websocket.Conn, p *Processor) *Connection {
+// Send sends a message to the connection.
+func (c *Connection) Send(m Message) {
+	c.sendCh <- m
+}
+
+// NewConnection creates a websocket connection.
+func NewConnection(c *websocket.Conn, h Handler) *Connection {
 	return &Connection{
-		conn:   c,
-		proc:   p,
-		sendCh: make(chan Message),
+		conn:    c,
+		handler: h,
+		sendCh:  make(chan Message),
+		closeCh: make(chan struct{}),
 	}
 }
