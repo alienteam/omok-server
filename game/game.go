@@ -1,4 +1,4 @@
-package main
+package game
 
 import (
 	"log"
@@ -6,17 +6,16 @@ import (
 	"github.com/alienteam/omok-server/core"
 )
 
-var server *core.Server
-
-type chat struct {
+// Game is a main server logic.
+type Game struct {
 	//core.JsonMessageHandler
 	core.StringMessageHandler
 }
 
-func (s *chat) OnEvent(e core.Event, c *core.Connection, m core.Message) {
+func (s *Game) OnEvent(e core.Event, c *core.Connection, m core.Message) {
 	switch e {
 	case core.EventConnected:
-		log.Println("EVENT_CONN", server.Count())
+		log.Println("EVENT_CONN")
 		c.Send("hello world~")
 	case core.EventRecv:
 		log.Printf("EVENT_RECV: %v", m)
@@ -25,10 +24,4 @@ func (s *chat) OnEvent(e core.Event, c *core.Connection, m core.Message) {
 	case core.EventClosed:
 		log.Println("EVENT_CLOSED")
 	}
-}
-
-func main() {
-	h := &chat{}
-	server = core.NewServer("localhost:8080", "/", h)
-	server.Start()
 }

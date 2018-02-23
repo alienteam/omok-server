@@ -12,8 +12,7 @@ type MessageHandler interface {
 }
 
 // JsonMessageHandler is json type of MessageHandler
-type JsonMessageHandler struct {
-}
+type JsonMessageHandler struct{}
 
 // Encode encodes json type.
 func (h *JsonMessageHandler) Encode(v Message) []byte {
@@ -28,8 +27,7 @@ func (h *JsonMessageHandler) Decode(v []byte) Message {
 	return t
 }
 
-type StringMessageHandler struct {
-}
+type StringMessageHandler struct{}
 
 // Encode encodes string type.
 func (h *StringMessageHandler) Encode(v Message) []byte {

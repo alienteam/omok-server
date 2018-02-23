@@ -9,6 +9,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+/*
+   total number of gorutine = 2n
+   number of concurrency connections : n
+   accept gorutine : 1
+*/
+
 // Server represents a websocket server.
 type Server struct {
 	server   *http.Server
@@ -72,7 +78,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleConnect(wc *websocket.Conn) {
-
 	c := NewConnection(wc, s.handler)
 	s.cm.add(c)
 
