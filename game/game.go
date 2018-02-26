@@ -10,6 +10,9 @@ import (
 type Game struct {
 	//core.JsonMessageHandler
 	core.StringMessageHandler
+
+	users map[int]*User
+	rooms map[int]*Room
 }
 
 func (s *Game) OnEvent(e core.Event, c *core.Connection, m core.Message) {
@@ -21,6 +24,7 @@ func (s *Game) OnEvent(e core.Event, c *core.Connection, m core.Message) {
 		log.Printf("EVENT_RECV: %v", m)
 	case core.EventSend:
 		log.Printf("EVENT_SEND: %v", m)
+		c.Close()
 	case core.EventClosed:
 		log.Println("EVENT_CLOSED")
 	}
