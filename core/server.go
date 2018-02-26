@@ -87,4 +87,5 @@ func (s *Server) handleConnect(wc *websocket.Conn) {
 
 	go c.handler.OnEvent(EventConnected, c, nil)
 	c.serve()
+	c.handler.OnEvent(EventClosed, c, nil)
 }

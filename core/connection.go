@@ -16,35 +16,42 @@ type Connection struct {
 func (c *Connection) serve() {
 	go c.receive()
 	c.send()
-	c.handler.OnEvent(EventClosed, c, nil)
+	c.conn.Close()
 }
 
 func (c *Connection) receive() {
 	defer func() {
-		c.Close()
+		close(c.sendCh)
+		c.conn.Close()
 	}()
-
 	for {
 		_, msg, err := c.conn.ReadMessage()
-		m := c.handler.Decode(msg)
-
 		if err != nil {
 			log.Printf("ReadMessage error : %v", err)
 			break
 		}
+		m := c.handler.Decode(msg)
 		c.handler.OnEvent(EventRecv, c, m)
 	}
 }
 
 func (c *Connection) send() {
+	defer func() {
+		c.conn.Close()
+	}()
 	for {
 		select {
 		case msg, ok := <-c.sendCh:
 			if !ok {
+				log.Println("SendCh closed")
 				return
 			}
 			data := c.handler.Encode(msg)
-			c.conn.WriteMessage(websocket.TextMessage, data)
+			err := c.conn.WriteMessage(websocket.TextMessage, data)
+			if err != nil {
+				log.Println("WriteMessage error: ", err)
+				return
+			}
 			c.handler.OnEvent(EventSend, c, msg)
 		}
 	}
@@ -57,7 +64,6 @@ func (c *Connection) Send(m Message) {
 
 // Close closes a connection.
 func (c *Connection) Close() {
-	close(c.sendCh)
 	c.conn.Close()
 }
 
